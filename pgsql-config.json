@@ -1,0 +1,8 @@
+{
+  "host": "39.101.150.9",
+  "port": 5432,
+  "database": "db_test_sz",
+  "user": "postgres",
+  "password": "Elu@1234",
+  "schema": "itos_theme_ats"
+}

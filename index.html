@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATS数据监控运维平台</title>
+    <script src="echarts.min.js"></script>
+    <link rel="stylesheet" href="fonts.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-secondary: #111827;
+            --bg-card: #1a2332;
+            --accent-cyan: #00f0ff;
+            --accent-purple: #7b61ff;
+            --accent-orange: #ffaa00;
+            --accent-red: #ff3366;
+            --accent-green: #00ff88;
+            --text-primary: #e8eaed;
+            --text-secondary: #8b95a5;
+            --border-color: #2a3548;
+        }
+        body {
+            font-family: 'Microsoft YaHei', 'Segoe UI', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: 
+                linear-gradient(90deg, transparent 49.5%, rgba(0,240,255,0.03) 49.5%, rgba(0,240,255,0.03) 50.5%, transparent 50.5%),
+                linear-gradient(0deg, transparent 49.5%, rgba(0,240,255,0.03) 49.5%, rgba(0,240,255,0.03) 50.5%, transparent 50.5%);
+            background-size: 60px 60px;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .container { position: relative; z-index: 1; }
+
+        /* ===== Header ===== */
+        .global-header {
+            height: 60px;
+            background: linear-gradient(180deg, rgba(26,35,50,0.98) 0%, rgba(17,24,39,0.95) 100%);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 200;
+        }
+        .global-header::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: 
+                radial-gradient(2.5px 2.5px at 10% 20%, rgba(0,240,255,1) 0%, transparent 100%),
+                radial-gradient(2px 2px at 25% 50%, rgba(255,255,255,0.9) 0%, transparent 100%),
+                radial-gradient(2.5px 2.5px at 40% 30%, rgba(0,240,255,1) 0%, transparent 100%),
+                radial-gradient(2px 2px at 55% 70%, rgba(123,97,255,1) 0%, transparent 100%),
+                radial-gradient(2.5px 2.5px at 70% 40%, rgba(0,240,255,1) 0%, transparent 100%),
+                radial-gradient(2px 2px at 85% 25%, rgba(255,255,255,0.9) 0%, transparent 100%);
+            animation: headerTwinkle 1s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes headerTwinkle {
+            0% { opacity: 0.4; transform: scale(1); }
+            33% { opacity: 1; transform: scale(1.3); }
+            66% { opacity: 0.7; transform: scale(1.1); }
+            100% { opacity: 0.5; transform: scale(1); }
+        }
+        .global-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-cyan), var(--accent-purple), transparent);
+        }
+        body { padding-top: 60px; }
+        
+        .header-left { display: flex; align-items: center; gap: 15px; position: relative; z-index: 1; }
+        .header-logo {
+            width: 40px; height: 40px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 15px rgba(0,240,255,0.4);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(0,240,255,0.3); }
+            50% { box-shadow: 0 0 30px rgba(0,240,255,0.5); }
+        }
+        .header-logo svg { width: 24px; height: 24px; fill: white; }
+        .header-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 20px; font-weight: 700;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .header-right { display: flex; align-items: center; gap: 20px; position: relative; z-index: 1; }
+        .system-time {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 14px;
+            color: var(--accent-cyan);
+        }
+        .db-status {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 16px;
+            background: rgba(139,149,165,0.1);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .db-status:hover { border-color: var(--text-secondary); }
+        .db-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-secondary); }
+        .db-dot.connected { background: var(--accent-green); box-shadow: 0 0 10px var(--accent-green); animation: blink 2s infinite; }
+        .db-dot.failed { background: var(--accent-red); box-shadow: 0 0 10px var(--accent-red); animation: blink 0.5s infinite; }
+        @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+        .db-text { font-size: 13px; color: var(--text-secondary); }
+
+        /* ===== Sidebar ===== */
+        .sidebar {
+            position: fixed; left: 0; top: 60px; bottom: 0;
+            width: 220px;
+            background: linear-gradient(180deg, rgba(26,35,50,0.98) 0%, rgba(17,24,39,0.95) 100%);
+            border-right: 1px solid var(--border-color);
+            padding: 20px 0;
+            z-index: 100;
+            overflow-y: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .sidebar::-webkit-scrollbar { display: none; }
+        .sidebar::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: 
+                radial-gradient(2px 2px at 15% 10%, rgba(0,240,255,1) 0%, transparent 100%),
+                radial-gradient(2px 2px at 85% 15%, rgba(123,97,255,1) 0%, transparent 100%),
+                radial-gradient(2px 2px at 50% 25%, rgba(255,255,255,0.9) 0%, transparent 100%),
+                radial-gradient(1.5px 1.5px at 20% 45%, rgba(0,240,255,0.8) 0%, transparent 100%),
+                radial-gradient(2px 2px at 75% 55%, rgba(123,97,255,0.9) 0%, transparent 100%);
+            animation: sidebarTwinkle 1.5s ease-in-out infinite;
+            pointer-events: none; z-index: 1;
+        }
+        @keyframes sidebarTwinkle {
+            0%,100%{opacity:0.3;transform:scale(1);}
+            50%{opacity:1;transform:scale(1.2);}
+        }
+        .sidebar.collapsed { width: 60px; }
+        .sidebar.collapsed .nav-link span { display: none; }
+        .sidebar.collapsed .nav-link { justify-content: center; padding: 14px; }
+        
+        .nav-menu { list-style: none; position: relative; z-index: 2; }
+        .nav-item { margin-bottom: 5px; }
+        .nav-link {
+            display: flex; align-items: center; gap: 12px;
+            padding: 14px 20px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-left: 3px solid transparent;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .nav-link:hover { background: rgba(0,240,255,0.05); color: var(--text-primary); }
+        .nav-link.active {
+            background: rgba(0,240,255,0.1);
+            color: var(--accent-cyan);
+            border-left-color: var(--accent-cyan);
+        }
+        .nav-link svg { width: 20px; height: 20px; fill: currentColor; flex-shrink: 0; }
+        .nav-link.setting { color: var(--accent-orange); }
+        
+        .sidebar-collapse {
+            position: absolute; bottom: 20px; left: 0; right: 0;
+            display: flex; justify-content: center;
+            padding: 15px;
+            border-top: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.3s;
+            z-index: 2;
+        }
+        .sidebar-collapse:hover { background: rgba(0,240,255,0.05); }
+        .sidebar-collapse svg { width: 24px; height: 24px; fill: var(--text-secondary); transition: transform 0.3s; }
+        .sidebar.collapsed .sidebar-collapse svg { transform: rotate(180deg); }
+
+        /* ===== Main Content ===== */
+        .page-content {
+            margin-left: 220px;
+            padding: 20px;
+            min-height: calc(100vh - 60px);
+            transition: margin-left 0.3s;
+        }
+        .page-content.expanded { margin-left: 60px; }
+        .page { display: none; }
+        .page.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
+        
+        .page-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 24px; font-weight: 600;
+            color: var(--accent-cyan);
+            margin: 0 20px 20px 20px;
+        }
+
+        /* ===== Stats Grid ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin: 0 20px 20px 20px;
+        }
+        @media (max-width: 1200px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+        
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0 20px rgba(0,240,255,0.3);
+            border-color: var(--accent-cyan);
+        }
+        .stat-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
+        }
+        .card-header {
+            display: flex; align-items: center; gap: 12px;
+            margin-bottom: 15px;
+        }
+        .card-icon {
+            width: 45px; height: 45px;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .card-icon.cyan { background: rgba(0,240,255,0.15); color: var(--accent-cyan); }
+        .card-icon.green { background: rgba(0,255,136,0.15); color: var(--accent-green); }
+        .card-icon.purple { background: rgba(123,97,255,0.15); color: var(--accent-purple); }
+        .card-icon.orange { background: rgba(255,170,0,0.15); color: var(--accent-orange); }
+        .card-icon.red { background: rgba(255,51,102,0.15); color: var(--accent-red); }
+        .card-icon svg { width: 22px; height: 22px; }
+        
+        .card-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 36px; font-weight: 700;
+            text-align: center;
+            position: absolute;
+            left: 50%; top: 50%;
+            transform: translate(-50%, -50%);
+            margin: 0;
+        }
+        .card-value.online { color: var(--accent-green); animation: blink 1s infinite; }
+        .card-value.offline { color: var(--accent-red); animation: blink 1s infinite; }
+        
+        .card-label {
+            font-size: 14px; color: var(--text-secondary);
+            position: absolute; right: 25px; bottom: 25px;
+        }
+
+        /* ===== Content Grid ===== */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 0 20px 20px 20px;
+        }
+        @media (max-width: 1200px) { .content-grid { grid-template-columns: 1fr; } }
+        
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .card-title {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 18px; font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 15px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .card-title::before {
+            content: ''; width: 4px; height: 20px;
+            background: linear-gradient(180deg, var(--accent-cyan), var(--accent-purple));
+            border-radius: 2px;
+        }
+
+        /* ===== Table ===== */
+        .table-container { max-height: 300px; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            text-align: left; padding: 12px;
+            font-size: 12px; color: var(--text-secondary);
+            text-transform: uppercase;
+            border-bottom: 2px solid var(--border-color);
+            background: var(--bg-card);
+            position: sticky; top: 0;
+        }
+        td { padding: 12px; font-size: 13px; border-bottom: 1px solid rgba(42,53,72,0.3); }
+        tr:hover td { background: rgba(0,240,255,0.05); }
+        
+        .status-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 5px 12px; border-radius: 20px; font-size: 12px;
+        }
+        .status-badge.online { background: rgba(0,255,136,0.15); color: var(--accent-green); }
+        .status-badge.offline { background: rgba(139,149,165,0.15); color: var(--text-secondary); }
+        .status-badge.error { background: rgba(255,51,102,0.15); color: var(--accent-red); }
+        .status-badge .dot { width: 6px; height: 6px; border-radius: 50%; }
+        .status-badge.online .dot { background: var(--accent-green); box-shadow: 0 0 6px var(--accent-green); }
+        .status-badge.offline .dot { background: var(--text-secondary); }
+        
+        .pagination {
+            display: flex; align-items: center; justify-content: center;
+            gap: 15px; padding: 15px;
+        }
+        .pagination-btn {
+            background: rgba(0,240,255,0.1);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 13px;
+        }
+        .pagination-btn:hover:not(:disabled) { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+        .pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        /* ===== Chart ===== */
+        .chart-container { height: 280px; }
+
+        /* ===== Filter Bar ===== */
+        .filter-bar {
+            display: flex; gap: 15px;
+            margin: 0 20px 20px 20px;
+            padding: 15px;
+            background: var(--bg-card);
+            border-radius: 8px;
+            align-items: center;
+        }
+        .filter-bar select, .filter-bar input {
+            padding: 8px 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+        }
+        .filter-bar input[type="date"] { color-scheme: dark; }
+        .download-btn {
+            background: rgba(0,240,255,0.15);
+            border: 1px solid var(--accent-cyan);
+            color: var(--accent-cyan);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-left: auto;
+        }
+        .download-btn:hover { background: rgba(0,240,255,0.3); }
+
+        /* ===== Modal ===== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--accent-purple);
+            border-radius: 12px;
+            width: 500px;
+            max-width: 90%;
+        }
+        .modal-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .modal-title { font-size: 18px; font-weight: 600; color: var(--accent-purple); }
+        .modal-close {
+            background: none; border: none;
+            color: var(--text-secondary);
+            font-size: 24px; cursor: pointer;
+            line-height: 1;
+        }
+        .modal-close:hover { color: var(--accent-cyan); }
+        .modal-body { padding: 20px; }
+        .form-group { margin-bottom: 18px; }
+        .form-label { display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-secondary); }
+        .form-input {
+            width: 100%; padding: 10px 14px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+        .form-input:focus { outline: none; border-color: var(--accent-purple); }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .modal-footer {
+            padding: 15px 20px;
+            border-top: 1px solid var(--border-color);
+            display: flex; justify-content: flex-end; gap: 12px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+        .btn-secondary:hover { border-color: var(--text-primary); color: var(--text-primary); }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+            border: none; color: white;
+            font-weight: 600;
+        }
+        .btn-primary:hover { box-shadow: 0 0 20px rgba(123,97,255,0.4); }
+        .btn-test {
+            display: flex; align-items: center; gap: 6px;
+            padding: 10px 16px;
+            background: transparent;
+            border: 1px solid var(--accent-cyan);
+            border-radius: 6px;
+            color: var(--accent-cyan);
+            cursor: pointer;
+            margin-right: auto;
+        }
+        .btn-test:hover { background: rgba(0,240,255,0.15); }
+
+        /* ===== Custom Popup ===== */
+        .custom-popup {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        .custom-popup.active { display: flex; }
+        .popup-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            animation: popupIn 0.3s;
+        }
+        @keyframes popupIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .popup-icon {
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            margin: 0 auto 25px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .popup-icon.success { background: rgba(0,255,136,0.15); border: 2px solid var(--accent-green); }
+        .popup-icon.error { background: rgba(255,51,102,0.15); border: 2px solid var(--accent-red); }
+        .popup-icon svg { width: 40px; height: 40px; }
+        .popup-icon.success svg { fill: var(--accent-green); }
+        .popup-icon.error svg { fill: var(--accent-red); }
+        .popup-title { font-size: 24px; font-weight: 600; margin-bottom: 15px; }
+        .popup-title.success { color: var(--accent-green); }
+        .popup-title.error { color: var(--accent-red); }
+        .popup-message { color: var(--text-secondary); font-size: 14px; margin-bottom: 30px; }
+        .popup-btn {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            border: none; color: white;
+            padding: 12px 40px;
+            font-size: 16px; font-weight: 600;
+            border-radius: 8px; cursor: pointer;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="global-header">
+            <div class="header-left">
+                <div class="header-logo">
+                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                </div>
+                <span class="header-title">ATS数据监控运维平台</span>
+            </div>
+            <div class="header-right">
+                <span class="system-time" id="systemTime"></span>
+                <div class="db-status" onclick="openDbConfig()">
+                    <span class="db-dot" id="dbDot"></span>
+                    <span class="db-text" id="dbText">数据库未连接</span>
+                </div>
+            </div>
+        </header>
+
+        <aside class="sidebar">
+            <ul class="nav-menu">
+                <li class="nav-item" data-page="home">
+                    <a class="nav-link active" onclick="showPage('home')">
+                        <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+                        <span>首页监控</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-page="timetable">
+                    <a class="nav-link" onclick="showPage('timetable')">
+                        <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM9 10H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z"/></svg>
+                        <span>时刻表接入</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-page="alarm">
+                    <a class="nav-link" onclick="showPage('alarm')">
+                        <svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+                        <span>实时报警</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-page="config">
+                    <a class="nav-link setting" onclick="showPage('config')">
+                        <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+                        <span>数据库配置</span>
+                    </a>
+                </li>
+            </ul>
+            <div class="sidebar-collapse" onclick="toggleSidebar()">
+                <svg viewBox="0 0 24 24"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"/></svg>
+            </div>
+        </aside>
+
+        <main class="page-content">
+            <!-- V1.0 Home Page -->
+            <div class="page active" id="page-home">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="card-header">
+                            <div class="card-icon cyan">
+                                <svg viewBox="0 0 24 24"><path d="M4 15.5C4 17.43 5.57 19 7.5 19L6 20.5v.5h12v-.5L16.5 19c1.93 0 3.5-1.57 3.5-3.5v-6c0-1.93-1.57-3.5-3.5-3.5h-6C5.57 9 4 10.57 4 12.5v3z"/></svg>
+                            </div>
+                            <span style="color:var(--text-secondary)">线路数</span>
+                        </div>
+                        <div class="card-value" id="lineCount">0</div>
+                        <div class="card-label">线路</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="card-header">
+                            <div class="card-icon purple">
+                                <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>
+                            </div>
+                            <span style="color:var(--text-secondary)">总服务数</span>
+                        </div>
+                        <div class="card-value" id="serviceCount">0</div>
+                        <div class="card-label">服务</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="card-header">
+                            <div class="card-icon green">
+                                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                            </div>
+                            <span style="color:var(--text-secondary)">在线服务</span>
+                        </div>
+                        <div class="card-value online" id="onlineCount">0</div>
+                        <div class="card-label">在线</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="card-header">
+                            <div class="card-icon orange">
+                                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                            </div>
+                            <span style="color:var(--text-secondary)">离线服务</span>
+                        </div>
+                        <div class="card-value offline" id="offlineCount">0</div>
+                        <div class="card-label">离线</div>
+                    </div>
+                </div>
+                <div class="content-grid">
+                    <div class="card">
+                        <h3 class="card-title">服务状态列表</h3>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr><th>序号</th><th>线路</th><th>服务</th><th>状态</th></tr>
+                                </thead>
+                                <tbody id="serviceTable"></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination">
+                            <button class="pagination-btn" onclick="changePage(-1)">上一页</button>
+                            <span id="pageInfo">1/1</span>
+                            <button class="pagination-btn" onclick="changePage(1)">下一页</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="card-title">服务状态监视</h3>
+                        <div class="chart-container" id="serviceChart"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- V2.0 Timetable -->
+            <div class="page" id="page-timetable">
+                <h2 class="page-title" style="display:none;">时刻表接入统计</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="card-header">
+                            <div class="card-icon cyan">
+                                <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
+                            </div>
+                            <span style="color:var(--text-secondary)">计划运行图</span>
+                        </div>
+                        <div class="card-value" id="planCount">0</div>
+                        <div class="card-label">接入线路</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="card-header">
+                            <div class="card-icon green">
+                                <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                            </div>
+                            <span style="color:var(--text-secondary)">实际运行图</span>
+                        </div>
+                        <div class="card-value" id="actualCount">0</div>
+                        <div class="card-label">接入线路</div>
+                    </div>
+                </div>
+                <div class="content-grid">
+                    <div class="card">
+                        <h3 class="card-title">计划运行图接入详情</h3>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr><th>线路</th><th>运行图</th><th>日期</th></tr>
+                                </thead>
+                                <tbody id="planTable"></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination">
+                            <button class="pagination-btn" onclick="changePlanPage(-1)">上一页</button>
+                            <span id="planPageInfo">1/1</span>
+                            <button class="pagination-btn" onclick="changePlanPage(1)">下一页</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="card-title">实际运行图接入详情</h3>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr><th>线路</th><th>运行图</th><th>日期</th></tr>
+                                </thead>
+                                <tbody id="actualTable"></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination">
+                            <button class="pagination-btn" onclick="changeActualPage(-1)">上一页</button>
+                            <span id="actualPageInfo">1/1</span>
+                            <button class="pagination-btn" onclick="changeActualPage(1)">下一页</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- V3.0 Alarm -->
+            <div class="page" id="page-alarm">
+                <h2 class="page-title" style="display:none;">实时报警统计</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="card-header">
+                            <div class="card-icon orange">
+                                <svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+                            </div>
+                            <span style="color:var(--text-secondary)">报警总数</span>
+                        </div>
+                        <div class="card-value" id="alarmTotal" style="color:var(--accent-orange)">0</div>
+                        <div class="card-label">总计</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="card-header">
+                            <div class="card-icon red">
+                                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                            </div>
+                            <span style="color:var(--text-secondary)">今日报警</span>
+                        </div>
+                        <div class="card-value" id="alarmToday" style="color:var(--accent-red)">0</div>
+                        <div class="card-label">今日</div>
+                    </div>
+                </div>
+                <div class="filter-bar">
+                    <select id="alarmLineFilter" onchange="filterAlarms()">
+                        <option value="">全部线路</option>
+                    </select>
+                    <input type="date" id="alarmDateFilter" onchange="filterAlarms()">
+                    <button class="download-btn" onclick="downloadAlarms()">下载Excel</button>
+                </div>
+                <div class="card" style="margin: 0 20px;">
+                    <h3 class="card-title">报警详情</h3>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr><th>序号</th><th>线路</th><th>报警信息</th><th>时间</th></tr>
+                            </thead>
+                            <tbody id="alarmTable"></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination">
+                        <button class="pagination-btn" onclick="changeAlarmPage(-1)">上一页</button>
+                        <span id="alarmPageInfo">1/1</span>
+                        <button class="pagination-btn" onclick="changeAlarmPage(1)">下一页</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- V4.0 Config -->
+            <div class="page" id="page-config">
+                <h2 class="page-title" style="display:none;">数据库配置</h2>
+                <div class="card" style="max-width: 700px; margin: 20px auto;">
+                    <div class="form-group">
+                        <label class="form-label">主机地址</label>
+                        <input class="form-input" id="dbHost" placeholder="localhost">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">端口</label>
+                            <input class="form-input" id="dbPort" placeholder="5432">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">数据库名</label>
+                            <input class="form-input" id="dbName" placeholder="ats_monitor">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">用户名</label>
+                            <input class="form-input" id="dbUser" placeholder="postgres">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">密码</label>
+                            <input class="form-input" type="password" id="dbPassword" placeholder="密码">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Schema</label>
+                        <input class="form-input" id="dbSchema" placeholder="public">
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick="testConnection()">测试连接</button>
+                        <button class="btn btn-primary" onclick="saveDbConfig()">保存配置</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- DB Config Modal -->
+        <div class="modal-overlay" id="dbConfigModal">
+            <div class="modal">
+                <div class="modal-header">
+                    <span class="modal-title">数据库配置</span>
+                    <button class="modal-close" onclick="closeDbConfig()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">主机地址</label>
+                        <input class="form-input" id="modalDbHost">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">端口</label>
+                            <input class="form-input" id="modalDbPort">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">数据库名</label>
+                            <input class="form-input" id="modalDbName">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Schema</label>
+                        <input class="form-input" id="modalDbSchema">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">用户名</label>
+                            <input class="form-input" id="modalDbUser">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">密码</label>
+                            <input class="form-input" type="password" id="modalDbPassword">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeDbConfig()">取消</button>
+                    <button class="btn btn-primary" onclick="saveModalDbConfig()">保存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Popup -->
+        <div class="custom-popup" id="customPopup">
+            <div class="popup-content">
+                <div class="popup-icon" id="popupIcon">
+                    <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                </div>
+                <div class="popup-title" id="popupTitle">成功</div>
+                <div class="popup-message" id="popupMessage">操作完成</div>
+                <button class="popup-btn" onclick="hidePopup()">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        
+        let serviceChart = null;
+        let servicesData = [];
+        let currentPage = 1;
+        const pageSize = 8;
+        let planData = [];
+        let planPage = 1;
+        let actualData = [];
+        let actualPage = 1;
+        let alarmData = [];
+        let alarmPageNum = 1;
+
+        function updateTime() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('systemTime').textContent = 
+                year + '-' + month + '-' + day + ' ' + hours + ':' + minutes + ':' + seconds;
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            document.getElementById('page-' + pageId).classList.add('active');
+            
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                if (item.dataset.page === pageId) {
+                    item.querySelector('.nav-link').classList.add('active');
+                }
+            });
+            
+            if (pageId === 'home') loadDashboard();
+            else if (pageId === 'timetable') loadTimetable();
+            else if (pageId === 'alarm') loadAlarms();
+            else if (pageId === 'config') loadDbConfig();
+        }
+
+        function toggleSidebar() {
+            document.querySelector('.sidebar').classList.toggle('collapsed');
+            document.querySelector('.page-content').classList.toggle('expanded');
+        }
+
+        function showPopup(type, title, message) {
+            const popup = document.getElementById('customPopup');
+            const icon = document.getElementById('popupIcon');
+            const titleEl = document.getElementById('popupTitle');
+            const messageEl = document.getElementById('popupMessage');
+            
+            icon.className = 'popup-icon ' + type;
+            titleEl.className = 'popup-title ' + type;
+            titleEl.textContent = title;
+            messageEl.textContent = message;
+            popup.classList.add('active');
+        }
+
+        function hidePopup() {
+            document.getElementById('customPopup').classList.remove('active');
+        }
+
+        function openDbConfig() {
+            loadDbConfig();
+            document.getElementById('dbConfigModal').classList.add('active');
+        }
+
+        function closeDbConfig() {
+            document.getElementById('dbConfigModal').classList.remove('active');
+        }
+
+        function updateDbStatus(configured) {
+            const dot = document.getElementById('dbDot');
+            const text = document.getElementById('dbText');
+            if (configured) {
+                dot.className = 'db-dot connected';
+                text.textContent = '已连接';
+            } else {
+                dot.className = 'db-dot failed';
+                text.textContent = '未连接';
+            }
+        }
+
+        async function loadDashboard() {
+            try {
+                const res = await fetch(API_BASE + '/api/dashboard');
+                const data = await res.json();
+                document.getElementById('lineCount').textContent = data.line_count || 0;
+                document.getElementById('serviceCount').textContent = data.service_count || 0;
+                document.getElementById('onlineCount').textContent = data.online_count || 0;
+                document.getElementById('offlineCount').textContent = data.offline_count || 0;
+                
+                const servicesRes = await fetch(API_BASE + '/api/services');
+                const servicesJson = await servicesRes.json();
+                servicesData = servicesJson.data || [];
+                currentPage = 1;
+                renderServices();
+                renderChart();
+            } catch (e) {
+                console.error('Load dashboard error:', e);
+            }
+        }
+
+        function renderServices() {
+            const tbody = document.getElementById('serviceTable');
+            tbody.innerHTML = '';
+            const start = (currentPage - 1) * pageSize;
+            const end = start + pageSize;
+            const pageData = servicesData.slice(start, end);
+            
+            pageData.forEach((item, index) => {
+                const statusClass = item.status === 1 ? 'online' : 'offline';
+                const statusText = item.status === 1 ? '在线' : '离线';
+                tbody.innerHTML += '<tr>' +
+                    '<td>' + (start + index + 1) + '</td>' +
+                    '<td>' + (item.line_name || '') + '</td>' +
+                    '<td>' + (item.server_name || '') + '</td>' +
+                    '<td><span class="status-badge ' + statusClass + '"><span class="dot"></span>' + statusText + '</span></td>' +
+                    '</tr>';
+            });
+            
+            const totalPages = Math.ceil(servicesData.length / pageSize) || 1;
+            document.getElementById('pageInfo').textContent = currentPage + '/' + totalPages;
+        }
+
+        function changePage(delta) {
+            const totalPages = Math.ceil(servicesData.length / pageSize) || 1;
+            const newPage = currentPage + delta;
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                renderServices();
+            }
+        }
+
+        function renderChart() {
+            const chartDom = document.getElementById('serviceChart');
+            if (!chartDom) return;
+            
+            if (!serviceChart) {
+                serviceChart = echarts.init(chartDom);
+            }
+            
+            const onlineCount = servicesData.filter(s => s.status === 1).length;
+            const offlineCount = servicesData.filter(s => s.status === 0).length;
+            
+            const option = {
+                tooltip: { trigger: 'axis' },
+                xAxis: { type: 'category', data: ['在线', '离线'] },
+                yAxis: { type: 'value' },
+                series: [{
+                    type: 'bar',
+                    data: [
+                        { value: onlineCount, itemStyle: { color: '#00ff88' }},
+                        { value: offlineCount, itemStyle: { color: '#ff3366' }}
+                    ],
+                    barWidth: '40%',
+                    animationDuration: 1000
+                }]
+            };
+            serviceChart.setOption(option);
+        }
+
+        async function loadTimetable() {
+            try {
+                const res = await fetch(API_BASE + '/api/timetable');
+                const data = await res.json();
+                
+                const planDiagrams = data.plan_diagrams || [];
+                const actualDiagrams = data.actual_diagrams || [];
+                
+                const uniquePlanLines = [...new Set(planDiagrams.map(d => d.line_name))];
+                const uniqueActualLines = [...new Set(actualDiagrams.map(d => d.line_id))];
+                
+                document.getElementById('planCount').textContent = uniquePlanLines.length;
+                document.getElementById('actualCount').textContent = uniqueActualLines.length;
+                
+                planData = planDiagrams;
+                planPage = 1;
+                renderPlanTable();
+                
+                actualData = actualDiagrams;
+                actualPage = 1;
+                renderActualTable();
+            } catch (e) {
+                console.error('Load timetable error:', e);
+            }
+        }
+
+        function renderPlanTable() {
+            const tbody = document.getElementById('planTable');
+            tbody.innerHTML = '';
+            const start = (planPage - 1) * pageSize;
+            const end = start + pageSize;
+            const pageData = planData.slice(start, end);
+            
+            pageData.forEach((item, index) => {
+                tbody.innerHTML += '<tr>' +
+                    '<td>' + (item.line_name || '') + '</td>' +
+                    '<td>' + (item.inused_schedule_name || '') + '</td>' +
+                    '<td>' + (item.inused_date || '') + '</td>' +
+                    '</tr>';
+            });
+            
+            const totalPages = Math.ceil(planData.length / pageSize) || 1;
+            document.getElementById('planPageInfo').textContent = planPage + '/' + totalPages;
+        }
+
+        function changePlanPage(delta) {
+            const totalPages = Math.ceil(planData.length / pageSize) || 1;
+            const newPage = planPage + delta;
+            if (newPage >= 1 && newPage <= totalPages) {
+                planPage = newPage;
+                renderPlanTable();
+            }
+        }
+
+        function renderActualTable() {
+            const tbody = document.getElementById('actualTable');
+            tbody.innerHTML = '';
+            const start = (actualPage - 1) * pageSize;
+            const end = start + pageSize;
+            const pageData = actualData.slice(start, end);
+            
+            pageData.forEach((item, index) => {
+                tbody.innerHTML += '<tr>' +
+                    '<td>' + (item.line_id || '') + '</td>' +
+                    '<td>' + (item.diagramname || '') + '</td>' +
+                    '<td>' + (item.inused_date || '') + '</td>' +
+                    '</tr>';
+            });
+            
+            const totalPages = Math.ceil(actualData.length / pageSize) || 1;
+            document.getElementById('actualPageInfo').textContent = actualPage + '/' + totalPages;
+        }
+
+        function changeActualPage(delta) {
+            const totalPages = Math.ceil(actualData.length / pageSize) || 1;
+            const newPage = actualPage + delta;
+            if (newPage >= 1 && newPage <= totalPages) {
+                actualPage = newPage;
+                renderActualTable();
+            }
+        }
+
+        async function loadAlarms() {
+            try {
+                const lineFilter = document.getElementById('alarmLineFilter').value;
+                const dateFilter = document.getElementById('alarmDateFilter').value;
+                
+                let url = API_BASE + '/api/alarms';
+                const params = [];
+                if (lineFilter) params.push('line_name=' + encodeURIComponent(lineFilter));
+                if (dateFilter) params.push('alarm_date=' + encodeURIComponent(dateFilter));
+                if (params.length > 0) url += '?' + params.join('&');
+                
+                const res = await fetch(url);
+                const data = await res.json();
+                alarmData = data.data || [];
+                alarmPageNum = 1;
+                renderAlarms();
+                
+                document.getElementById('alarmTotal').textContent = alarmData.length;
+                
+                const today = new Date().toISOString().split('T')[0];
+                const todayRes = await fetch(API_BASE + '/api/alarms?alarm_date=' + today);
+                const todayData = await todayRes.json();
+                document.getElementById('alarmToday').textContent = (todayData.data || []).length;
+                
+                loadAlarmLines();
+            } catch (e) {
+                console.error('Load alarms error:', e);
+            }
+        }
+
+        async function loadAlarmLines() {
+            try {
+                const res = await fetch(API_BASE + '/api/alarm-lines');
+                const data = await res.json();
+                const select = document.getElementById('alarmLineFilter');
+                select.innerHTML = '<option value="">全部线路</option>';
+                
+                (data.data || []).forEach(line => {
+                    select.innerHTML += '<option value="' + line.line_name + '">' + line.line_name + '</option>';
+                });
+            } catch (e) {
+                console.error('Load alarm lines error:', e);
+            }
+        }
+
+        function renderAlarms() {
+            const tbody = document.getElementById('alarmTable');
+            tbody.innerHTML = '';
+            const start = (alarmPageNum - 1) * pageSize;
+            const end = start + pageSize;
+            const pageData = alarmData.slice(start, end);
+            
+            pageData.forEach((item, index) => {
+                const time = item.gen_time ? item.gen_time.substring(0, 19) : '';
+                tbody.innerHTML += '<tr>' +
+                    '<td>' + (start + index + 1) + '</td>' +
+                    '<td>' + (item.line_name || '') + '</td>' +
+                    '<td>' + (item.alarm_content || '') + '</td>' +
+                    '<td>' + time + '</td>' +
+                    '</tr>';
+            });
+            
+            const totalPages = Math.ceil(alarmData.length / pageSize) || 1;
+            document.getElementById('alarmPageInfo').textContent = alarmPageNum + '/' + totalPages;
+        }
+
+        function changeAlarmPage(delta) {
+            const totalPages = Math.ceil(alarmData.length / pageSize) || 1;
+            const newPage = alarmPageNum + delta;
+            if (newPage >= 1 && newPage <= totalPages) {
+                alarmPageNum = newPage;
+                renderAlarms();
+            }
+        }
+
+        function filterAlarms() {
+            alarmPageNum = 1;
+            loadAlarms();
+        }
+
+        function downloadAlarms() {
+            const rows = [['序号', '线路', '报警信息', '时间']];
+            alarmData.forEach((item, index) => {
+                rows.push([
+                    index + 1,
+                    item.line_name || '',
+                    item.alarm_content || '',
+                    item.gen_time || ''
+                ]);
+            });
+            
+            let csv = rows.map(r => r.map(c => '"' + c + '"').join(',')).join('\n');
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'alarms_' + new Date().toISOString().split('T')[0] + '.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        async function loadDbConfig() {
+            try {
+                const res = await fetch(API_BASE + '/config');
+                const data = await res.json();
+                
+                document.getElementById('dbHost').value = data.host || '';
+                document.getElementById('dbPort').value = data.port || 5432;
+                document.getElementById('dbName').value = data.database || '';
+                document.getElementById('dbUser').value = data.user || '';
+                document.getElementById('dbSchema').value = data.schema || 'public';
+                
+                document.getElementById('modalDbHost').value = data.host || '';
+                document.getElementById('modalDbPort').value = data.port || 5432;
+                document.getElementById('modalDbName').value = data.database || '';
+                document.getElementById('modalDbUser').value = data.user || '';
+                document.getElementById('modalDbSchema').value = data.schema || 'public';
+                document.getElementById('modalDbPassword').value = '';
+                
+                updateDbStatus(data.configured);
+            } catch (e) {
+                console.error('Load config error:', e);
+            }
+        }
+
+        async function testConnection() {
+            const config = {
+                host: document.getElementById('dbHost').value,
+                port: document.getElementById('dbPort').value,
+                database: document.getElementById('dbName').value,
+                user: document.getElementById('dbUser').value,
+                password: document.getElementById('dbPassword').value,
+                schema: document.getElementById('dbSchema').value
+            };
+            
+            try {
+                await fetch(API_BASE + '/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                
+                const res = await fetch(API_BASE + '/api/dashboard');
+                const data = await res.json();
+                
+                if (data.service_count !== undefined && data.service_count >= 0) {
+                    showPopup('success', '连接成功', '数据库连接已建立');
+                    updateDbStatus(true);
+                } else {
+                    showPopup('error', '连接失败', 'Schema无效或无法查询数据');
+                }
+            } catch (e) {
+                showPopup('error', '连接失败', e.message);
+            }
+        }
+
+        async function saveDbConfig() {
+            const config = {
+                host: document.getElementById('dbHost').value,
+                port: document.getElementById('dbPort').value,
+                database: document.getElementById('dbName').value,
+                user: document.getElementById('dbUser').value,
+                password: document.getElementById('dbPassword').value,
+                schema: document.getElementById('dbSchema').value
+            };
+            
+            try {
+                await fetch(API_BASE + '/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                
+                const res = await fetch(API_BASE + '/api/dashboard');
+                const data = await res.json();
+                
+                if (data.service_count !== undefined && data.service_count >= 0) {
+                    showPopup('success', '保存成功', '数据库配置已保存');
+                    updateDbStatus(true);
+                    loadDashboard();
+                } else {
+                    showPopup('error', '保存失败', 'Schema无效或无法查询数据');
+                }
+            } catch (e) {
+                showPopup('error', '保存失败', e.message);
+            }
+        }
+
+        async function saveModalDbConfig() {
+            const config = {
+                host: document.getElementById('modalDbHost').value,
+                port: document.getElementById('modalDbPort').value,
+                database: document.getElementById('modalDbName').value,
+                user: document.getElementById('modalDbUser').value,
+                password: document.getElementById('modalDbPassword').value,
+                schema: document.getElementById('modalDbSchema').value
+            };
+            
+            try {
+                await fetch(API_BASE + '/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                
+                const res = await fetch(API_BASE + '/api/dashboard');
+                const data = await res.json();
+                
+                if (data.service_count !== undefined && data.service_count >= 0) {
+                    showPopup('success', '保存成功', '数据库配置已保存');
+                    updateDbStatus(true);
+                    closeDbConfig();
+                    loadDashboard();
+                } else {
+                    showPopup('error', '保存失败', 'Schema无效或无法查询数据');
+                }
+            } catch (e) {
+                showPopup('error', '保存失败', e.message);
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            if (serviceChart) serviceChart.resize();
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDbConfig();
+            loadDashboard();
+        });
+    </script>
+</body>
+</html>
