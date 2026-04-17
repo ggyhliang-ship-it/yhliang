@@ -80,6 +80,28 @@ def execute_query(sql: str):
 async def lifespan(app: FastAPI):
     # 启动时加载配置
     load_db_config()
+    
+    # 启动时测试数据库连接
+    try:
+        conn = psycopg2.connect(
+            host=DB_CONFIG.get("host", ""),
+            port=DB_CONFIG.get("port", 5432),
+            database=DB_CONFIG.get("database", ""),
+            user=DB_CONFIG.get("user", ""),
+            password=DB_CONFIG.get("password", ""),
+            connect_timeout=5
+        )
+        schema = DB_CONFIG.get("schema", "")
+        if schema:
+            cursor = conn.cursor()
+            cursor.execute(f"SELECT schema_name FROM information_schema.schemata WHERE schema_name = %s", (schema,))
+            if not cursor.fetchone():
+                print(f"警告: 模式 '{schema}' 不存在")
+            cursor.close()
+        conn.close()
+    except Exception as e:
+        print(f"警告: 数据库连接失败 - {e}")
+    
     yield
 
 app = FastAPI(
@@ -125,7 +147,8 @@ async def get_config():
         "database": DB_CONFIG.get("database", ""),
         "user": DB_CONFIG.get("user", ""),
         "schema": DB_CONFIG.get("schema", "public"),
-        "configured": bool(DB_CONFIG.get("host"))
+        "configured": bool(DB_CONFIG.get("host")),
+        "has_password": bool(DB_CONFIG.get("password"))
     }
 
 @app.post("/config")
@@ -145,6 +168,120 @@ async def update_config(config: dict):
         json.dump(DB_CONFIG, f, ensure_ascii=False, indent=2)
     
     return {"success": True, "message": "配置已更新"}
+
+@app.get("/config/test-saved")
+async def test_saved_config():
+    """测试已保存的数据库配置"""
+    if not DB_CONFIG.get("host"):
+        return {"success": False, "error": "请先配置数据库连接信息"}
+    
+    host = DB_CONFIG.get("host", "")
+    port = DB_CONFIG.get("port", 5432)
+    database = DB_CONFIG.get("database", "")
+    user = DB_CONFIG.get("user", "")
+    password = DB_CONFIG.get("password", "")
+    schema = DB_CONFIG.get("schema", "")
+    
+    if not all([host, database, user, schema]):
+        return {"success": False, "error": "请完善数据库配置信息"}
+    
+    try:
+        conn = psycopg2.connect(
+            host=host,
+            port=port,
+            database=database,
+            user=user,
+            password=password,
+            connect_timeout=5
+        )
+        
+        if schema:
+            cursor = conn.cursor()
+            cursor.execute(f"SELECT schema_name FROM information_schema.schemata WHERE schema_name = %s", (schema,))
+            if not cursor.fetchone():
+                cursor.close()
+                conn.close()
+                return {"success": False, "error": f"模式 '{schema}' 不存在"}
+            cursor.close()
+        
+        conn.close()
+        return {"success": True, "message": "连接成功"}
+    except psycopg2.OperationalError as e:
+        error_msg = str(e)
+        if "connection refused" in error_msg.lower():
+            return {"success": False, "error": f"无法连接到主机 {host}，请检查端口 {port} 是否正确"}
+        elif "password authentication failed" in error_msg.lower():
+            return {"success": False, "error": "用户名或密码错误"}
+        elif "database" in error_msg.lower() and "does not exist" in error_msg.lower():
+            return {"success": False, "error": f"数据库 '{database}' 不存在"}
+        elif "could not translate host" in error_msg.lower():
+            return {"success": False, "error": f"无法解析主机名 {host}"}
+        else:
+            return {"success": False, "error": f"连接失败：{error_msg}"}
+    except Exception as e:
+        return {"success": False, "error": f"连接失败：{str(e)}"}
+
+@app.post("/config/test")
+async def test_config(config: dict):
+    """测试数据库连接"""
+    host = config.get("host", "").strip()
+    port = config.get("port", "").strip()
+    database = config.get("database", "").strip()
+    user = config.get("user", "").strip()
+    password = config.get("password", "")
+    schema = config.get("schema", "").strip()
+    
+    if not host:
+        return {"success": False, "error": "请输入主机地址"}
+    if not port:
+        return {"success": False, "error": "请输入端口号"}
+    if not database:
+        return {"success": False, "error": "请输入数据库名称"}
+    if not user:
+        return {"success": False, "error": "请输入用户名"}
+    if not schema:
+        return {"success": False, "error": "请输入模式名称"}
+    
+    try:
+        port = int(port)
+    except ValueError:
+        return {"success": False, "error": "端口号必须是数字"}
+    
+    try:
+        conn = psycopg2.connect(
+            host=host,
+            port=port,
+            database=database,
+            user=user,
+            password=password,
+            connect_timeout=5
+        )
+        
+        if schema:
+            cursor = conn.cursor()
+            cursor.execute(f"SELECT schema_name FROM information_schema.schemata WHERE schema_name = %s", (schema,))
+            if not cursor.fetchone():
+                cursor.close()
+                conn.close()
+                return {"success": False, "error": f"模式 '{schema}' 不存在"}
+            cursor.close()
+        
+        conn.close()
+        return {"success": True, "message": "连接成功"}
+    except psycopg2.OperationalError as e:
+        error_msg = str(e)
+        if "connection refused" in error_msg.lower():
+            return {"success": False, "error": f"无法连接到主机 {host}，请检查端口 {port} 是否正确"}
+        elif "password authentication failed" in error_msg.lower():
+            return {"success": False, "error": "用户名或密码错误"}
+        elif "database" in error_msg.lower() and "does not exist" in error_msg.lower():
+            return {"success": False, "error": f"数据库 '{database}' 不存在"}
+        elif "could not translate host" in error_msg.lower():
+            return {"success": False, "error": f"无法解析主机名 {host}"}
+        else:
+            return {"success": False, "error": f"连接失败：{error_msg}"}
+    except Exception as e:
+        return {"success": False, "error": f"连接失败：{str(e)}"}
 
 @app.post("/api/query")
 async def query_data(request: QueryRequest):
@@ -699,6 +836,14 @@ async def get_alarm_lines(alarm_date: str = ""):
     
     query += " ORDER BY line_name"
     
+    result = execute_query(query)
+    return result
+
+@app.get("/api/alarms-total")
+async def get_alarms_total():
+    """获取报警总数"""
+    schema = DB_CONFIG.get("schema", "public")
+    query = f"SELECT COUNT(*) as total FROM {schema}.message_alarm"
     result = execute_query(query)
     return result
 

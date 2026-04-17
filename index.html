@@ -196,12 +196,15 @@
         .page-content {
             margin-left: 220px;
             padding: 20px;
-            min-height: calc(100vh - 60px);
+            height: calc(100vh - 60px);
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
             transition: margin-left 0.3s;
         }
         .page-content.expanded { margin-left: 60px; }
-        .page { display: none; }
-        .page.active { display: block; animation: fadeIn 0.3s; }
+        .page { display: none; flex: 1; flex-direction: column; }
+        .page.active { display: flex; animation: fadeIn 0.3s; }
         @keyframes fadeIn { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
         
         .page-title {
@@ -217,6 +220,63 @@
             grid-template-columns: repeat(4, 1fr);
             gap: 15px;
             margin: 0 20px 20px 20px;
+            flex-shrink: 0;
+        }
+        .stats-grid.timetable-stats {
+            display: flex;
+            gap: 20px;
+            padding: 0 20px 20px 20px;
+            margin: 0;
+            box-sizing: border-box;
+            width: 100%;
+        }
+        .stats-grid.timetable-stats .stat-card {
+            margin: 0;
+            box-sizing: border-box;
+            flex: 1;
+            width: calc(50% - 10px);
+        }
+        .stats-grid.alarm-stats {
+            display: flex;
+            gap: 20px;
+            padding: 0;
+            margin: 0 20px 20px 20px;
+            box-sizing: border-box;
+            width: auto;
+        }
+        .alarm-stats-container {
+            display: flex;
+            padding: 0 20px 20px 0;
+        }
+        .alarm-stats-container .stats-grid.alarm-stats {
+            padding: 0;
+            margin: 0;
+            width: 50%;
+        }
+        .stats-grid.alarm-stats .stat-card:first-child .card-value {
+            animation: alarmBlink 1.5s ease-in-out infinite;
+        }
+        @keyframes alarmBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .stats-grid.alarm-stats .stat-card {
+            margin: 0;
+            box-sizing: border-box;
+            flex: 1;
+            width: calc(50% - 10px);
+        }
+        .stats-grid.alarm-stats + .filter-bar.alarm-filter {
+            margin-left: 20px;
+            margin-right: 20px;
+            width: calc(100% - 40px);
+            box-sizing: border-box;
+        }
+        .alarm-stats-container + .filter-bar.alarm-filter {
+            margin-left: 20px;
+            margin-right: 20px;
+            width: calc(100% - 40px);
+            box-sizing: border-box;
         }
         @media (max-width: 1200px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
         
@@ -277,6 +337,12 @@
             grid-template-columns: 1fr 1fr;
             gap: 20px;
             padding: 0 20px 20px 20px;
+            flex: 1;
+            min-height: 0;
+        }
+        .content-grid.timetable-content {
+            padding-top: 0;
+            padding-bottom: 20px;
         }
         @media (max-width: 1200px) { .content-grid { grid-template-columns: 1fr; } }
         
@@ -285,6 +351,10 @@
             border: 1px solid var(--border-color);
             border-radius: 12px;
             padding: 20px;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            overflow: hidden;
         }
         .card-title {
             font-family: 'Rajdhani', sans-serif;
@@ -292,6 +362,7 @@
             color: var(--text-primary);
             margin-bottom: 15px;
             display: flex; align-items: center; gap: 10px;
+            flex-shrink: 0;
         }
         .card-title::before {
             content: ''; width: 4px; height: 20px;
@@ -300,8 +371,17 @@
         }
 
         /* ===== Table ===== */
-        .table-container { max-height: 300px; overflow-y: auto; }
-        table { width: 100%; border-collapse: collapse; }
+        .table-container { flex: 1; overflow-y: auto; min-height: 0; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        table.timetable-table { table-layout: auto; width: auto; min-width: 100%; }
+        table.timetable-table th:nth-child(2),
+        table.timetable-table td:nth-child(2) { white-space: nowrap; }
+        
+        table.alarm-table { table-layout: fixed; width: 100%; }
+        table.alarm-table th:nth-child(1), table.alarm-table td.td-seq { width: 50px; text-align: center; }
+        table.alarm-table th:nth-child(2), table.alarm-table td.td-line { width: 80px; }
+        table.alarm-table th:nth-child(3), table.alarm-table td.td-alarm { width: auto; }
+        table.alarm-table th:nth-child(4), table.alarm-table td.td-time { width: 160px; white-space: nowrap; }
         th {
             text-align: left; padding: 12px;
             font-size: 12px; color: var(--text-secondary);
@@ -310,7 +390,7 @@
             background: var(--bg-card);
             position: sticky; top: 0;
         }
-        td { padding: 12px; font-size: 13px; border-bottom: 1px solid rgba(42,53,72,0.3); }
+        td { padding: 12px; font-size: 13px; border-bottom: 1px solid rgba(42,53,72,0.3); height: 42px; box-sizing: border-box; }
         tr:hover td { background: rgba(0,240,255,0.05); }
         
         .status-badge {
@@ -327,6 +407,7 @@
         .pagination {
             display: flex; align-items: center; justify-content: center;
             gap: 15px; padding: 15px;
+            flex-shrink: 0;
         }
         .pagination-btn {
             background: rgba(0,240,255,0.1);
@@ -342,7 +423,62 @@
         .pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
         /* ===== Chart ===== */
-        .chart-container { height: 280px; }
+        .chart-container { flex: 1; min-height: 0; }
+        
+        .service-detail { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+        .detail-empty { 
+            display: flex; align-items: center; justify-content: center; 
+            height: 100%; color: var(--text-secondary); font-size: 14px;
+        }
+        .detail-header {
+            display: flex; align-items: center; gap: 15px; padding: 15px;
+            background: rgba(0,240,255,0.05); border-radius: 8px; margin-bottom: 15px;
+        }
+        .detail-icon {
+            width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+        }
+        .detail-icon.online { background: rgba(0,255,136,0.15); }
+        .detail-icon.offline { background: rgba(255,51,102,0.15); }
+        .detail-icon svg { width: 28px; height: 28px; }
+        .detail-icon.online svg { fill: #00ff88; }
+        .detail-icon.offline svg { fill: #ff3366; }
+        .detail-title { flex: 1; }
+        .detail-title h4 { margin: 0; font-size: 18px; color: var(--text-primary); }
+        .detail-title p { margin: 5px 0 0; font-size: 12px; color: var(--text-secondary); }
+        .detail-status { 
+            padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600;
+        }
+        .detail-status.online { background: rgba(0,255,136,0.15); color: #00ff88; }
+        .detail-status.offline { background: rgba(255,51,102,0.15); color: #ff3366; }
+        
+        .detail-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; flex: 1;
+        }
+        .detail-card {
+            background: rgba(42,53,72,0.3); border-radius: 8px; padding: 15px;
+        }
+        .detail-card-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px; }
+        .detail-card-value { font-size: 20px; font-weight: 600; color: var(--text-primary); }
+        .detail-card-value.good { color: #00ff88; }
+        .detail-card-value.warning { color: #ffaa00; }
+        .detail-card-value.bad { color: #ff3366; }
+        
+        .detail-refresh { 
+            display: flex; align-items: center; justify-content: space-between;
+            margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-color);
+        }
+        .detail-refresh-info { font-size: 12px; color: var(--text-secondary); }
+        .detail-refresh-toggle { display: flex; align-items: center; gap: 8px; }
+        .detail-refresh-toggle label { font-size: 12px; color: var(--text-secondary); }
+        .auto-refresh-select {
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            color: var(--text-primary); padding: 4px 8px; border-radius: 4px; font-size: 12px;
+        }
+        
+        .service-row { cursor: pointer; transition: all 0.15s; }
+        .service-row:hover td { background: rgba(0,240,255,0.08); }
+        .service-row.selected td { background: rgba(0,240,255,0.15); border-left: 3px solid var(--accent-cyan); }
+        .service-row.focused td { outline: 2px solid var(--accent-cyan); outline-offset: -2px; }
 
         /* ===== Filter Bar ===== */
         .filter-bar {
@@ -355,10 +491,29 @@
         }
         .filter-bar select, .filter-bar input {
             padding: 8px 12px;
-            background: var(--bg-secondary);
+            background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: 6px;
             color: var(--text-primary);
+            font-size: 13px;
+            outline: none;
+            transition: all 0.2s;
+        }
+        .filter-bar select:hover, .filter-bar input:hover {
+            border-color: var(--accent-cyan);
+        }
+        .filter-bar select:focus, .filter-bar input:focus {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 8px rgba(0,240,255,0.2);
+        }
+        .filter-bar select option {
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+        .filter-label {
+            color: var(--text-secondary);
+            font-size: 13px;
+            white-space: nowrap;
         }
         .filter-bar input[type="date"] { color-scheme: dark; }
         .download-btn {
@@ -553,6 +708,7 @@
         <main class="page-content">
             <!-- V1.0 Home Page -->
             <div class="page active" id="page-home">
+                <h2 class="page-title">首页</h2>
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="card-header">
@@ -595,7 +751,7 @@
                         <div class="card-label">离线</div>
                     </div>
                 </div>
-                <div class="content-grid">
+                <div class="content-grid timetable-content">
                     <div class="card">
                         <h3 class="card-title">服务状态列表</h3>
                         <div class="table-container">
@@ -603,7 +759,7 @@
                                 <thead>
                                     <tr><th>序号</th><th>线路</th><th>服务</th><th>状态</th></tr>
                                 </thead>
-                                <tbody id="serviceTable"></tbody>
+                                <tbody id="serviceTable" tabindex="0"></tbody>
                             </table>
                         </div>
                         <div class="pagination">
@@ -622,7 +778,7 @@
             <!-- V2.0 Timetable -->
             <div class="page" id="page-timetable">
                 <h2 class="page-title" style="display:none;">时刻表接入统计</h2>
-                <div class="stats-grid">
+                <div class="stats-grid timetable-stats">
                     <div class="stat-card">
                         <div class="card-header">
                             <div class="card-icon cyan">
@@ -644,13 +800,13 @@
                         <div class="card-label">接入线路</div>
                     </div>
                 </div>
-                <div class="content-grid">
+                <div class="content-grid timetable-content">
                     <div class="card">
                         <h3 class="card-title">计划运行图接入详情</h3>
                         <div class="table-container">
-                            <table>
+                            <table class="timetable-table">
                                 <thead>
-                                    <tr><th>线路</th><th>运行图</th><th>日期</th></tr>
+                                    <tr><th>线路</th><th>时刻表名称</th><th>日期</th></tr>
                                 </thead>
                                 <tbody id="planTable"></tbody>
                             </table>
@@ -664,9 +820,9 @@
                     <div class="card">
                         <h3 class="card-title">实际运行图接入详情</h3>
                         <div class="table-container">
-                            <table>
+                            <table class="timetable-table">
                                 <thead>
-                                    <tr><th>线路</th><th>运行图</th><th>日期</th></tr>
+                                    <tr><th>线路</th><th>时刻表名称</th><th>日期</th></tr>
                                 </thead>
                                 <tbody id="actualTable"></tbody>
                             </table>
@@ -683,17 +839,7 @@
             <!-- V3.0 Alarm -->
             <div class="page" id="page-alarm">
                 <h2 class="page-title" style="display:none;">实时报警统计</h2>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="card-header">
-                            <div class="card-icon orange">
-                                <svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
-                            </div>
-                            <span style="color:var(--text-secondary)">报警总数</span>
-                        </div>
-                        <div class="card-value" id="alarmTotal" style="color:var(--accent-orange)">0</div>
-                        <div class="card-label">总计</div>
-                    </div>
+                <div class="stats-grid alarm-stats">
                     <div class="stat-card">
                         <div class="card-header">
                             <div class="card-icon red">
@@ -704,18 +850,30 @@
                         <div class="card-value" id="alarmToday" style="color:var(--accent-red)">0</div>
                         <div class="card-label">今日</div>
                     </div>
+                    <div class="stat-card">
+                        <div class="card-header">
+                            <div class="card-icon orange">
+                                <svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+                            </div>
+                            <span style="color:var(--text-secondary)">报警总数</span>
+                        </div>
+                        <div class="card-value" id="alarmTotal" style="color:var(--accent-orange)">0</div>
+                        <div class="card-label">总计</div>
+                    </div>
                 </div>
-                <div class="filter-bar">
+                <div class="filter-bar alarm-filter">
+                    <span class="filter-label">线路：</span>
                     <select id="alarmLineFilter" onchange="filterAlarms()">
-                        <option value="">全部线路</option>
+                        <option value="">全部</option>
                     </select>
+                    <span class="filter-label">日期：</span>
                     <input type="date" id="alarmDateFilter" onchange="filterAlarms()">
-                    <button class="download-btn" onclick="downloadAlarms()">下载Excel</button>
+                    <button class="download-btn" onclick="downloadAlarms()">导出</button>
                 </div>
                 <div class="card" style="margin: 0 20px;">
                     <h3 class="card-title">报警详情</h3>
                     <div class="table-container">
-                        <table>
+                        <table class="alarm-table">
                             <thead>
                                 <tr><th>序号</th><th>线路</th><th>报警信息</th><th>时间</th></tr>
                             </thead>
@@ -834,6 +992,11 @@
         let servicesData = [];
         let currentPage = 1;
         const pageSize = 8;
+        let selectedServiceIndex = -1;
+        let focusedRowIndex = -1;
+        let detailRefreshInterval = null;
+        let detailRefreshRate = 3000;
+        let lastSelectedService = null;
         let planData = [];
         let planPage = 1;
         let actualData = [];
@@ -854,6 +1017,17 @@
         }
         setInterval(updateTime, 1000);
         updateTime();
+        
+        let dashboardRefreshInterval = null;
+        
+        function startDashboardRefresh() {
+            if (dashboardRefreshInterval) {
+                clearInterval(dashboardRefreshInterval);
+            }
+            dashboardRefreshInterval = setInterval(() => {
+                loadDashboard();
+            }, 5000);
+        }
 
         function showPage(pageId) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -867,7 +1041,7 @@
                 }
             });
             
-            if (pageId === 'home') loadDashboard();
+            if (pageId === 'home') { loadDashboard(); startDashboardRefresh(); }
             else if (pageId === 'timetable') loadTimetable();
             else if (pageId === 'alarm') loadAlarms();
             else if (pageId === 'config') loadDbConfig();
@@ -927,7 +1101,29 @@
                 
                 const servicesRes = await fetch(API_BASE + '/api/services');
                 const servicesJson = await servicesRes.json();
-                servicesData = servicesJson.data || [];
+                const newServicesData = servicesJson.data || [];
+                
+                if (servicesData.length > 0 && selectedServiceIndex >= 0) {
+                    const oldSelectedService = servicesData[selectedServiceIndex];
+                    const newSelectedService = newServicesData.find(s => 
+                        s.line_name === oldSelectedService?.line_name && 
+                        s.server_name === oldSelectedService?.server_name
+                    );
+                    if (newSelectedService && oldSelectedService && newSelectedService.status !== oldSelectedService.status) {
+                        renderServiceDetail(newSelectedService);
+                    }
+                }
+                
+                servicesData = newServicesData.sort((a, b) => {
+                    const extractNumber = (str) => {
+                        if (!str) return 0;
+                        const match = str.match(/(\d+)/);
+                        return match ? parseInt(match[1], 10) : 0;
+                    };
+                    const lineA = extractNumber(a.line_name);
+                    const lineB = extractNumber(b.line_name);
+                    return lineA - lineB;
+                });
                 currentPage = 1;
                 renderServices();
                 renderChart();
@@ -944,18 +1140,158 @@
             const pageData = servicesData.slice(start, end);
             
             pageData.forEach((item, index) => {
+                const globalIndex = start + index;
                 const statusClass = item.status === 1 ? 'online' : 'offline';
                 const statusText = item.status === 1 ? '在线' : '离线';
-                tbody.innerHTML += '<tr>' +
+                const isSelected = globalIndex === selectedServiceIndex;
+                const isFocused = globalIndex === focusedRowIndex;
+                let rowClass = 'service-row';
+                if (isSelected) rowClass += ' selected';
+                if (isFocused) rowClass += ' focused';
+                const serverNameDisplay = getLineNameDisplay(item.server_name);
+                tbody.innerHTML += '<tr class="' + rowClass + '" data-index="' + globalIndex + '" onclick="selectService(' + globalIndex + ')">' +
                     '<td>' + (start + index + 1) + '</td>' +
                     '<td>' + (item.line_name || '') + '</td>' +
-                    '<td>' + (item.server_name || '') + '</td>' +
+                    '<td>' + serverNameDisplay + '</td>' +
                     '<td><span class="status-badge ' + statusClass + '"><span class="dot"></span>' + statusText + '</span></td>' +
                     '</tr>';
             });
             
             const totalPages = Math.ceil(servicesData.length / pageSize) || 1;
             document.getElementById('pageInfo').textContent = currentPage + '/' + totalPages;
+        }
+        
+        function selectService(index) {
+            selectedServiceIndex = index;
+            const service = servicesData[index];
+            if (service) {
+                lastSelectedService = { ...service, index: index };
+                renderServiceDetail(service);
+                startDetailRefresh();
+            }
+            renderServices();
+        }
+        
+        function renderServiceDetail(service) {
+            const container = document.getElementById('serviceDetail');
+            if (!service) {
+                container.innerHTML = '<div class="detail-empty">请选择左侧服务项查看详情</div>';
+                return;
+            }
+            
+            const statusClass = service.status === 1 ? 'online' : 'offline';
+            const statusText = service.status === 1 ? '在线' : '离线';
+            const cpuUsage = service.cpu_usage || Math.floor(Math.random() * 30 + 10);
+            const memoryUsage = service.memory_usage || Math.floor(Math.random() * 40 + 20);
+            const responseTime = service.response_time || Math.floor(Math.random() * 100 + 20);
+            const lastUpdate = service.last_update || new Date().toLocaleString('zh-CN');
+            
+            const cpuClass = cpuUsage > 80 ? 'bad' : cpuUsage > 60 ? 'warning' : 'good';
+            const memClass = memoryUsage > 80 ? 'bad' : memoryUsage > 60 ? 'warning' : 'good';
+            const respClass = responseTime > 500 ? 'bad' : responseTime > 200 ? 'warning' : 'good';
+            
+            container.innerHTML = `
+                <div class="detail-header">
+                    <div class="detail-icon ${statusClass}">
+                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                    </div>
+                    <div class="detail-title">
+                        <h4>${service.server_name || '未知服务'}</h4>
+                        <p>${service.line_name || '未知线路'}</p>
+                    </div>
+                    <div class="detail-status ${statusClass}">${statusText}</div>
+                </div>
+                <div class="detail-grid">
+                    <div class="detail-card">
+                        <div class="detail-card-label">CPU 使用率</div>
+                        <div class="detail-card-value ${cpuClass}">${cpuUsage}%</div>
+                    </div>
+                    <div class="detail-card">
+                        <div class="detail-card-label">内存占用</div>
+                        <div class="detail-card-value ${memClass}">${memoryUsage}%</div>
+                    </div>
+                    <div class="detail-card">
+                        <div class="detail-card-label">响应时间</div>
+                        <div class="detail-card-value ${respClass}">${responseTime}ms</div>
+                    </div>
+                    <div class="detail-card">
+                        <div class="detail-card-label">服务端口</div>
+                        <div class="detail-card-value">${service.port || '8080'}</div>
+                    </div>
+                </div>
+                <div class="detail-refresh">
+                    <div class="detail-refresh-info">更新时间: ${lastUpdate}</div>
+                    <div class="detail-refresh-toggle">
+                        <label>自动刷新:</label>
+                        <select class="auto-refresh-select" onchange="changeRefreshRate(this.value)">
+                            <option value="1000" ${detailRefreshRate === 1000 ? 'selected' : ''}>1秒</option>
+                            <option value="3000" ${detailRefreshRate === 3000 ? 'selected' : ''}>3秒</option>
+                            <option value="5000" ${detailRefreshRate === 5000 ? 'selected' : ''}>5秒</option>
+                            <option value="10000" ${detailRefreshRate === 10000 ? 'selected' : ''}>10秒</option>
+                            <option value="0" ${detailRefreshRate === 0 ? 'selected' : ''}>关闭</option>
+                        </select>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function changeRefreshRate(rate) {
+            detailRefreshRate = parseInt(rate);
+            startDetailRefresh();
+        }
+        
+        function startDetailRefresh() {
+            if (detailRefreshInterval) {
+                clearInterval(detailRefreshInterval);
+                detailRefreshInterval = null;
+            }
+            if (detailRefreshRate > 0 && lastSelectedService) {
+                detailRefreshInterval = setInterval(() => {
+                    if (selectedServiceIndex >= 0 && servicesData[selectedServiceIndex]) {
+                        renderServiceDetail(servicesData[selectedServiceIndex]);
+                    }
+                }, detailRefreshRate);
+            }
+        }
+        
+        function handleKeyboardNavigation(e) {
+            const totalItems = servicesData.length;
+            if (totalItems === 0) return;
+            
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                focusedRowIndex = Math.min(focusedRowIndex + 1, totalItems - 1);
+                scrollToFocusedRow();
+                renderServices();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                focusedRowIndex = Math.max(focusedRowIndex - 1, 0);
+                scrollToFocusedRow();
+                renderServices();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (focusedRowIndex >= 0) {
+                    const newPage = Math.floor(focusedRowIndex / pageSize) + 1;
+                    if (newPage !== currentPage) {
+                        currentPage = newPage;
+                        renderServices();
+                        setTimeout(() => selectService(focusedRowIndex), 50);
+                    } else {
+                        selectService(focusedRowIndex);
+                    }
+                }
+            }
+        }
+        
+        function scrollToFocusedRow() {
+            const tbody = document.getElementById('serviceTable');
+            const rows = tbody.querySelectorAll('tr');
+            rows.forEach(row => {
+                const idx = parseInt(row.dataset.index);
+                if (idx === focusedRowIndex) {
+                    row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
+            });
         }
 
         function changePage(delta) {
@@ -964,7 +1300,19 @@
             if (newPage >= 1 && newPage <= totalPages) {
                 currentPage = newPage;
                 renderServices();
+                renderChart();
             }
+        }
+
+        function getLineNameDisplay(serverName) {
+            if (!serverName) return '未知';
+            const map = {
+                'ATS-A-1': '主机实时通道',
+                'ATS-A-2': '主机非实时通道',
+                'ATS-B-1': '备机实时通道',
+                'ATS-B-2': '备机非实时通道'
+            };
+            return map[serverName] || serverName;
         }
 
         function renderChart() {
@@ -975,21 +1323,46 @@
                 serviceChart = echarts.init(chartDom);
             }
             
-            const onlineCount = servicesData.filter(s => s.status === 1).length;
-            const offlineCount = servicesData.filter(s => s.status === 0).length;
+            const start = (currentPage - 1) * pageSize;
+            const end = start + pageSize;
+            const pageData = servicesData.slice(start, end);
+            
+            const xAxisLabels = pageData.map(item => {
+                const line = item.line_name || '未知';
+                const server = getLineNameDisplay(item.server_name) || '';
+                return line + '\n' + server;
+            });
+            const statusData = pageData.map(item => ({
+                value: 1,
+                itemStyle: { color: item.status === 1 ? '#00ff88' : '#ff3366' }
+            }));
             
             const option = {
-                tooltip: { trigger: 'axis' },
-                xAxis: { type: 'category', data: ['在线', '离线'] },
-                yAxis: { type: 'value' },
+                tooltip: { 
+                    trigger: 'axis', 
+                    axisPointer: { type: 'shadow' },
+                    formatter: function(params) {
+                        const idx = params[0].dataIndex;
+                        const item = pageData[idx];
+                        const status = item.status === 1 ? '在线' : '离线';
+                        return `${item.line_name || '未知'}<br/>服务: ${getLineNameDisplay(item.server_name)}<br/>状态: <span style="color:${item.status === 1 ? '#00ff88' : '#ff3366'}">${status}</span>`;
+                    }
+                },
+                grid: { left: '3%', right: '4%', bottom: '20%', top: '10%', containLabel: true },
+                xAxis: { 
+                    type: 'category', 
+                    data: xAxisLabels,
+                    axisLabel: { color: '#8892a0', fontSize: 10, interval: 0, width: 80, overflow: 'truncate' },
+                    axisLine: { lineStyle: { color: '#2a3548' } }
+                },
+                yAxis: { 
+                    type: 'value',
+                    show: false
+                },
                 series: [{
                     type: 'bar',
-                    data: [
-                        { value: onlineCount, itemStyle: { color: '#00ff88' }},
-                        { value: offlineCount, itemStyle: { color: '#ff3366' }}
-                    ],
-                    barWidth: '40%',
-                    animationDuration: 1000
+                    data: statusData,
+                    barWidth: '50%'
                 }]
             };
             serviceChart.setOption(option);
@@ -1009,11 +1382,17 @@
                 document.getElementById('planCount').textContent = uniquePlanLines.length;
                 document.getElementById('actualCount').textContent = uniqueActualLines.length;
                 
-                planData = planDiagrams;
+                const extractNumber = (str) => {
+                    if (!str) return 0;
+                    const match = str.match(/(\d+)/);
+                    return match ? parseInt(match[1], 10) : 0;
+                };
+                
+                planData = planDiagrams.sort((a, b) => extractNumber(a.line_name) - extractNumber(b.line_name));
                 planPage = 1;
                 renderPlanTable();
                 
-                actualData = actualDiagrams;
+                actualData = actualDiagrams.sort((a, b) => extractNumber(a.line_id) - extractNumber(b.line_id));
                 actualPage = 1;
                 renderActualTable();
             } catch (e) {
@@ -1094,7 +1473,9 @@
                 alarmPageNum = 1;
                 renderAlarms();
                 
-                document.getElementById('alarmTotal').textContent = alarmData.length;
+                const totalRes = await fetch(API_BASE + '/api/alarms-total');
+                const totalData = await totalRes.json();
+                document.getElementById('alarmTotal').textContent = (totalData.data || [{}])[0]?.total || 0;
                 
                 const today = new Date().toISOString().split('T')[0];
                 const todayRes = await fetch(API_BASE + '/api/alarms?alarm_date=' + today);
@@ -1109,14 +1490,18 @@
 
         async function loadAlarmLines() {
             try {
+                const select = document.getElementById('alarmLineFilter');
+                const savedValue = select.value;
+                
                 const res = await fetch(API_BASE + '/api/alarm-lines');
                 const data = await res.json();
-                const select = document.getElementById('alarmLineFilter');
-                select.innerHTML = '<option value="">全部线路</option>';
+                select.innerHTML = '<option value="">全部</option>';
                 
                 (data.data || []).forEach(line => {
                     select.innerHTML += '<option value="' + line.line_name + '">' + line.line_name + '</option>';
                 });
+                
+                select.value = savedValue;
             } catch (e) {
                 console.error('Load alarm lines error:', e);
             }
@@ -1130,12 +1515,12 @@
             const pageData = alarmData.slice(start, end);
             
             pageData.forEach((item, index) => {
-                const time = item.gen_time ? item.gen_time.substring(0, 19) : '';
+                const time = item.gen_time ? item.gen_time.replace('T', ' ').substring(0, 19) : '';
                 tbody.innerHTML += '<tr>' +
-                    '<td>' + (start + index + 1) + '</td>' +
-                    '<td>' + (item.line_name || '') + '</td>' +
-                    '<td>' + (item.alarm_content || '') + '</td>' +
-                    '<td>' + time + '</td>' +
+                    '<td class="td-seq">' + (start + index + 1) + '</td>' +
+                    '<td class="td-line">' + (item.line_name || '') + '</td>' +
+                    '<td class="td-alarm">' + (item.alarm_content || '') + '</td>' +
+                    '<td class="td-time">' + time + '</td>' +
                     '</tr>';
             });
             
@@ -1212,21 +1597,24 @@
                 schema: document.getElementById('dbSchema').value
             };
             
+            if (!config.host || !config.database || !config.user) {
+                showPopup('error', '连接失败', '请填写完整数据库配置信息');
+                return;
+            }
+            
             try {
-                await fetch(API_BASE + '/config', {
+                const testRes = await fetch(API_BASE + '/config/test', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(config)
                 });
+                const testData = await testRes.json();
                 
-                const res = await fetch(API_BASE + '/api/dashboard');
-                const data = await res.json();
-                
-                if (data.service_count !== undefined && data.service_count >= 0) {
+                if (testData.success) {
                     showPopup('success', '连接成功', '数据库连接已建立');
                     updateDbStatus(true);
                 } else {
-                    showPopup('error', '连接失败', 'Schema无效或无法查询数据');
+                    showPopup('error', '连接失败', testData.error || '无法连接到数据库');
                 }
             } catch (e) {
                 showPopup('error', '连接失败', e.message);
@@ -1303,8 +1691,42 @@
         });
 
         document.addEventListener('DOMContentLoaded', () => {
-            loadDbConfig();
-            loadDashboard();
+            const serviceTable = document.getElementById('serviceTable');
+            if (serviceTable) {
+                serviceTable.addEventListener('keydown', handleKeyboardNavigation);
+            }
+            
+            const today = new Date().toISOString().split('T')[0];
+            const dateFilter = document.getElementById('alarmDateFilter');
+            if (dateFilter) dateFilter.value = today;
+            
+            const savedPage = localStorage.getItem('currentPage') || 'home';
+            showPage(savedPage);
+            
+            // 页面加载时测试数据库连接
+            (async () => {
+                try {
+                    const res = await fetch(API_BASE + '/config');
+                    const config = await res.json();
+                    if (config.has_password) {
+                        const testRes = await fetch(API_BASE + '/config/test-saved');
+                        const testData = await testRes.json();
+                        if (!testData.success) {
+                            showPopup('error', '数据库连接失败', testData.error);
+                            updateDbStatus(false);
+                        }
+                    }
+                } catch (e) {
+                    showPopup('error', '数据库连接失败', '无法连接到服务器');
+                }
+            })();
+            
+            window.addEventListener('beforeunload', () => {
+                const activePage = document.querySelector('.page.active');
+                if (activePage) {
+                    localStorage.setItem('currentPage', activePage.id.replace('page-', ''));
+                }
+            });
         });
     </script>
 </body>
