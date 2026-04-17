@@ -155,9 +155,26 @@
             0%,100%{opacity:0.3;transform:scale(1);}
             50%{opacity:1;transform:scale(1.2);}
         }
-        .sidebar.collapsed { width: 60px; }
-        .sidebar.collapsed .nav-link span { display: none; }
+        .sidebar.collapsed { width: 60px; overflow: visible !important; }
+        .sidebar.collapsed .nav-link span { display: none !important; }
         .sidebar.collapsed .nav-link { justify-content: center; padding: 14px; }
+        body.sidebar-collapsed .nav-link:hover::after,
+        .sidebar.collapsed .nav-link:hover::after {
+            content: attr(data-title) !important;
+            position: absolute !important;
+            left: 65px !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            background: #1a2332 !important;
+            color: #e2e8f0 !important;
+            padding: 8px 14px !important;
+            border-radius: 6px !important;
+            font-size: 13px !important;
+            white-space: nowrap !important;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4) !important;
+            z-index: 9999 !important;
+            pointer-events: none !important;
+        }
         
         .nav-menu { list-style: none; position: relative; z-index: 2; }
         .nav-item { margin-bottom: 5px; }
@@ -169,6 +186,7 @@
             border-left: 3px solid transparent;
             transition: all 0.3s;
             cursor: pointer;
+            position: relative;
         }
         .nav-link:hover { background: rgba(0,240,255,0.05); color: var(--text-primary); }
         .nav-link.active {
@@ -355,6 +373,14 @@
             flex-direction: column;
             min-height: 0;
             overflow: hidden;
+        }
+        .card-title {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 18px; font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 15px;
+            display: flex; align-items: center; gap: 10px;
+            flex-shrink: 0;
         }
         .card-title {
             font-family: 'Rajdhani', sans-serif;
@@ -676,25 +702,25 @@
         <aside class="sidebar">
             <ul class="nav-menu">
                 <li class="nav-item" data-page="home">
-                    <a class="nav-link active" onclick="showPage('home')">
+                    <a class="nav-link active" onclick="showPage('home')" data-title="首页">
                         <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-                        <span>首页监控</span>
+                        <span>首页</span>
                     </a>
                 </li>
                 <li class="nav-item" data-page="timetable">
-                    <a class="nav-link" onclick="showPage('timetable')">
+                    <a class="nav-link" onclick="showPage('timetable')" data-title="时刻表接入">
                         <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM9 10H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z"/></svg>
                         <span>时刻表接入</span>
                     </a>
                 </li>
                 <li class="nav-item" data-page="alarm">
-                    <a class="nav-link" onclick="showPage('alarm')">
+                    <a class="nav-link" onclick="showPage('alarm')" data-title="实时报警">
                         <svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
                         <span>实时报警</span>
                     </a>
                 </li>
                 <li class="nav-item" data-page="config">
-                    <a class="nav-link setting" onclick="showPage('config')">
+                    <a class="nav-link setting" onclick="showPage('config')" data-title="数据库配置">
                         <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
                         <span>数据库配置</span>
                     </a>
@@ -708,7 +734,7 @@
         <main class="page-content">
             <!-- V1.0 Home Page -->
             <div class="page active" id="page-home">
-                <h2 class="page-title">首页</h2>
+                <h2 class="page-title" style="display:none;">首页</h2>
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="card-header">
@@ -1050,6 +1076,10 @@
         function toggleSidebar() {
             document.querySelector('.sidebar').classList.toggle('collapsed');
             document.querySelector('.page-content').classList.toggle('expanded');
+            document.body.classList.toggle('sidebar-collapsed');
+            setTimeout(() => {
+                if (serviceChart) serviceChart.resize();
+            }, 300);
         }
 
         function showPopup(type, title, message) {
@@ -1124,7 +1154,12 @@
                     const lineB = extractNumber(b.line_name);
                     return lineA - lineB;
                 });
-                currentPage = 1;
+                if (!servicesData || servicesData.length === 0) {
+                    currentPage = 1;
+                } else {
+                    const maxPage = Math.ceil(servicesData.length / pageSize) || 1;
+                    if (currentPage > maxPage) currentPage = maxPage;
+                }
                 renderServices();
                 renderChart();
             } catch (e) {
