@@ -84,14 +84,8 @@
         body { padding-top: 60px; }
         
         .header-left { display: flex; align-items: center; gap: 15px; position: relative; z-index: 1; }
-        .header-logo {
-            width: 40px; height: 40px;
-            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
-            border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 0 15px rgba(0,240,255,0.4);
-            animation: pulse 2s ease-in-out infinite;
-        }
+        .header-logo { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px rgba(0,240,255,0.4); animation: pulse 2s ease-in-out infinite; }
+        .header-logo img { width: 24px; height: 24px; object-fit: contain; }
         @keyframes pulse {
             0%, 100% { box-shadow: 0 0 20px rgba(0,240,255,0.3); }
             50% { box-shadow: 0 0 30px rgba(0,240,255,0.5); }
@@ -126,6 +120,19 @@
         .db-dot.failed { background: var(--accent-red); box-shadow: 0 0 10px var(--accent-red); animation: blink 0.5s infinite; }
         @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
         .db-text { font-size: 13px; color: var(--text-secondary); }
+        .chat-assistant-btn {
+            display: flex; align-items: center; justify-content: center;
+            width: 40px; height: 40px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 0 15px rgba(0,240,255,0.3);
+        }
+        .chat-assistant-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 25px rgba(0,240,255,0.5);
+        }
 
         /* ===== Sidebar ===== */
         .sidebar {
@@ -687,7 +694,7 @@
         <header class="global-header">
             <div class="header-left">
                 <div class="header-logo">
-                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                    <img src="favicon.ico" alt="Logo" style="width: 24px; height: 24px;">
                 </div>
                 <span class="header-title">ATS数据监控运维平台</span>
             </div>
@@ -696,6 +703,9 @@
                 <div class="db-status" onclick="openDbConfig()">
                     <span class="db-dot" id="dbDot"></span>
                     <span class="db-text" id="dbText">数据库未连接</span>
+                </div>
+                <div class="chat-assistant-btn" onclick="toggleChatAssistant()" title="智能问数助手">
+                    <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12zM7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z"/></svg>
                 </div>
             </div>
         </header>
@@ -1764,6 +1774,235 @@
                 }
             });
         });
+
+        var chatAssistantOpen = false;
+        function toggleChatAssistant() {
+            chatAssistantOpen = !chatAssistantOpen;
+            var chatWindow = document.getElementById('chatAssistantWindow');
+            if (chatAssistantOpen) {
+                chatWindow.style.display = 'flex';
+                setTimeout(() => chatWindow.classList.add('show'), 10);
+            } else {
+                chatWindow.classList.remove('show');
+                setTimeout(() => chatWindow.style.display = 'none', 300);
+            }
+        }
+
+        function sendMessage() {
+            var input = document.getElementById('chatInput');
+            var message = input.value.trim();
+            if (!message) return;
+            
+            addMessage(message, 'user');
+            input.value = '';
+            
+            setTimeout(() => {
+                var response = getBotResponse(message);
+                addMessage(response, 'bot');
+            }, 500);
+        }
+
+        function addMessage(text, type) {
+            var messagesContainer = document.getElementById('chatMessages');
+            var messageDiv = document.createElement('div');
+            messageDiv.className = 'chat-message ' + type;
+            messageDiv.innerHTML = '<div class="message-content">' + text + '</div>';
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function getBotResponse(message) {
+            message = message.toLowerCase();
+            
+            var now = new Date();
+            var year = now.getFullYear();
+            var month = now.getMonth() + 1;
+            var day = now.getDate();
+            var weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+            var weekDay = weekDays[now.getDay()];
+            var hours = now.getHours();
+            var minutes = now.getMinutes();
+            var timeStr = (hours < 10 ? '0' + hours : hours) + ':' + (minutes < 10 ? '0' + minutes : minutes);
+            
+            if (message.includes('日期') || message.includes('今天') || message.includes('几号')) {
+                return '今天是 ' + year + '年' + month + '月' + day + '日 ' + weekDay;
+            }
+            if (message.includes('时间') || message.includes('几点')) {
+                return '现在时间是 ' + timeStr;
+            }
+            if (message.includes('星期') || message.includes('周')) {
+                return '今天是 ' + weekDay;
+            }
+            if (message.includes('年') && message.includes('月')) {
+                return '现在是 ' + year + '年' + month + '月';
+            }
+            if (message.includes('天气')) {
+                return '抱歉，我目前无法获取实时天气信息。您可以查看天气预报网站或使用手机天气应用获取准确天气数据。';
+            }
+            if (message.includes('你好') || message.includes('您好') || message.includes('hi') || message.includes('hello')) {
+                return '您好！我是ATS智能问数助手，请问有什么可以帮助您的吗？';
+            }
+            if (message.includes('帮助') || message.includes('help')) {
+                return '我可以帮您解答以下问题：<br>- 查询日期和时间<br>- 回答关于系统的常见问题<br>- 提供运维监控相关帮助<br><br>请直接问我问题吧！';
+            }
+            if (message.includes('系统') || message.includes('平台')) {
+                return 'ATS数据监控运维平台是一个用于监控和运维管理的系统，可以实时监控服务状态、系统指标等信息。';
+            }
+            if (message.includes('服务') || message.includes('监控')) {
+                return '本平台可以监控各项服务的运行状态，包括服务名称、在线人数、状态类型等信息。您可以在首页查看详细的服务状态列表。';
+            }
+            if (message.includes('数据库') || message.includes('db')) {
+                return '数据库连接状态显示在页面右上角。绿色表示已连接，红色表示连接失败。点击可以修改数据库配置。';
+            }
+            if (message.includes('谢谢') || message.includes('感谢')) {
+                return '不客气！很高兴能帮助您。如有其他问题，请随时问我。';
+            }
+            if (message.includes('再见') || message.includes('拜拜')) {
+                return '再见！祝您工作顺利！';
+            }
+            
+            return '抱歉，我不太理解您的问题。您可以尝试询问：日期、时间、天气、系统信息、帮助等，我会尽力回答您。';
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
     </script>
+
+    <style>
+        .chat-assistant-window {
+            display: none;
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 380px;
+            height: 500px;
+            background: #1a1f2e;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            flex-direction: column;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            z-index: 10000;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+        }
+        .chat-assistant-window.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .chat-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            border-radius: 12px 12px 0 0;
+        }
+        .chat-header-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: white;
+            font-weight: 600;
+        }
+        .chat-header-close {
+            color: white;
+            cursor: pointer;
+            font-size: 20px;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+        .chat-header-close:hover { opacity: 1; }
+        .chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .chat-message {
+            display: flex;
+            max-width: 85%;
+        }
+        .chat-message.user {
+            align-self: flex-end;
+        }
+        .chat-message.bot {
+            align-self: flex-start;
+        }
+        .chat-message .message-content {
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+        .chat-message.user .message-content {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        .chat-message.bot .message-content {
+            background: #252b3d;
+            color: var(--text-primary);
+            border-bottom-left-radius: 4px;
+        }
+        .chat-input-area {
+            display: flex;
+            padding: 15px;
+            border-top: 1px solid var(--border-color);
+            gap: 10px;
+        }
+        .chat-input {
+            flex: 1;
+            padding: 10px 14px;
+            background: #252b3d;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            color: var(--text-primary);
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .chat-input:focus {
+            border-color: var(--accent-cyan);
+        }
+        .chat-send-btn {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            border: none;
+            border-radius: 20px;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .chat-send-btn:hover {
+            transform: scale(1.05);
+        }
+    </style>
+
+    <div id="chatAssistantWindow" class="chat-assistant-window">
+        <div class="chat-header">
+            <div class="chat-header-title">
+                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12zM7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z"/></svg>
+                智能问数助手
+            </div>
+            <div class="chat-header-close" onclick="toggleChatAssistant()">×</div>
+        </div>
+        <div id="chatMessages" class="chat-messages">
+            <div class="chat-message bot">
+                <div class="message-content">您好！我是ATS智能问数助手，可以回答日期、时间、天气等日常问题，也可以帮您了解系统功能。请问有什么可以帮您的？</div>
+            </div>
+        </div>
+        <div class="chat-input-area">
+            <input id="chatInput" class="chat-input" type="text" placeholder="请输入您的问题..." onkeypress="handleKeyPress(event)">
+            <button class="chat-send-btn" onclick="sendMessage()">发送</button>
+        </div>
+    </div>
 </body>
 </html>
